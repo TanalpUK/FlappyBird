@@ -1,15 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flappy Game</title>
+  <title>Flappy Bird Enhanced</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
   <style>
     body {
       margin: 0;
       padding: 0;
+      background-color: #70c5ce;
     }
     canvas {
       display: block;
@@ -25,7 +25,7 @@
       height: 600,
       physics: {
         default: 'arcade',
-        arcade: { gravity: { y: 300 }, debug: false },
+        arcade: { gravity: { y: 800 }, debug: false },
       },
       scene: {
         preload: preload,
@@ -36,54 +36,92 @@
 
     const game = new Phaser.Game(config);
 
-    let bird, cursors, pipes, score = 0, scoreText;
+    let bird, cursors, pipes, score = 0, scoreText, isGameOver = false;
 
     function preload() {
-      this.load.image('bird', 'https://example.com/bird.png');
-      this.load.image('pipe', 'https://example.com/pipe.png');
-      this.load.image('sky', 'https://example.com/sky.png');
+      this.load.image('bird', 'https://i.imgur.com/cYbj3cT.png'); // Bird sprite
+      this.load.image('pipe', 'https://i.imgur.com/B0A3DW9.png'); // Pipe sprite
+      this.load.image('sky', 'https://i.imgur.com/fDYgWX1.png'); // Background
     }
 
     function create() {
-      this.add.image(400, 300, 'sky');
-      bird = this.physics.add.sprite(100, 300, 'bird');
+      // Background
+      this.add.image(400, 300, 'sky').setScale(2);
+
+      // Bird
+      bird = this.physics.add.sprite(100, 300, 'bird').setScale(0.5);
       bird.setCollideWorldBounds(true);
+
+      // Pipes group
       pipes = this.physics.add.group();
+
+      // Input
       cursors = this.input.keyboard.createCursorKeys();
 
+      // Spawn pipes every 1.5 seconds
       this.time.addEvent({
         delay: 1500,
-        callback: spawnPipe,
+        callback: spawnPipes,
         callbackScope: this,
         loop: true,
       });
 
+      // Scoring
       scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
 
-      this.physics.add.collider(bird, pipes, hitPipe, null, this);
+      // Collision logic
+      this.physics.add.collider(bird, pipes, gameOver, null, this);
     }
 
     function update() {
+      if (isGameOver) return;
+
+      // Bird controls
       if (cursors.space.isDown) {
-        bird.setVelocityY(-200);
+        bird.setVelocityY(-350);
       }
+
+      // Bird animation (angle change)
+      bird.setAngle(Math.min(bird.body.velocity.y / 4, 20));
     }
 
-    function spawnPipe() {
+    function spawnPipes() {
+      if (isGameOver) return;
+
+      // Random pipe gap
+      const gap = 150;
       const pipeY = Phaser.Math.Between(200, 400);
-      const pipe = pipes.create(800, pipeY, 'pipe');
-      pipe.setVelocityX(-200);
-      pipe.setCollideWorldBounds(true);
-      pipe.setImmovable();
-      pipe.body.allowGravity = false;
 
-      score += 1;
-      scoreText.setText('Score: ' + score);
+      // Top pipe
+      const topPipe = pipes.create(800, pipeY - gap / 2 - 320, 'pipe');
+      topPipe.setFlipY(true);
+      topPipe.setVelocityX(-200);
+      topPipe.body.allowGravity = false;
+      topPipe.setImmovable();
+
+      // Bottom pipe
+      const bottomPipe = pipes.create(800, pipeY + gap / 2, 'pipe');
+      bottomPipe.setVelocityX(-200);
+      bottomPipe.body.allowGravity = false;
+      bottomPipe.setImmovable();
+
+      // Add a scoring event
+      topPipe.scored = false;
     }
 
-    function hitPipe() {
+    function gameOver() {
+      isGameOver = true;
       this.physics.pause();
       bird.setTint(0xff0000);
+      this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+    }
+
+    function updateScore(pipe) {
+      if (!pipe.scored && pipe.x < bird.x) {
+        pipe.scored = true;
+        score += 1;
+        scoreText.setText('Score: ' + score);
+      }
     }
   </script>
 </body>
