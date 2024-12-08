@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flappy Bird Enhanced</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
@@ -36,20 +36,22 @@
 
     const game = new Phaser.Game(config);
 
-    let bird, cursors, pipes, score = 0, scoreText, isGameOver = false;
+    let bird, cursors, pipes, score = 0, scoreText, isGameOver = false, background;
 
     function preload() {
-      this.load.image('bird', 'https://i.imgur.com/cYbj3cT.png'); // Bird sprite
-      this.load.image('pipe', 'https://i.imgur.com/B0A3DW9.png'); // Pipe sprite
-      this.load.image('sky', 'https://i.imgur.com/fDYgWX1.png'); // Background
+      // Flappy Bird-like Assets (You can replace these with your own)
+      this.load.image('bird', 'https://raw.githubusercontent.com/kilsyth/bird-game/master/assets/sprites/bluebird-midflap.png');
+      this.load.image('pipe', 'https://raw.githubusercontent.com/kilsyth/bird-game/master/assets/sprites/pipe-green.png');
+      this.load.image('sky', 'https://raw.githubusercontent.com/kilsyth/bird-game/master/assets/sprites/background-day.png');
     }
 
     function create() {
-      // Background
-      this.add.image(400, 300, 'sky').setScale(2);
+      // Create a scrolling background using tileSprite
+      background = this.add.tileSprite(400, 300, 800, 600, 'sky').setScrollFactor(0);
+      background.setScale(2);
 
       // Bird
-      bird = this.physics.add.sprite(100, 300, 'bird').setScale(0.5);
+      bird = this.physics.add.sprite(100, 300, 'bird').setScale(1.5);
       bird.setCollideWorldBounds(true);
 
       // Pipes group
@@ -74,21 +76,41 @@
     }
 
     function update() {
-      if (isGameOver) return;
+      if (isGameOver) {
+        // If game is over, allow restart on SPACE
+        if (cursors.space.isDown) {
+          this.scene.restart();
+          isGameOver = false;
+          score = 0;
+        }
+        return;
+      }
 
-      // Bird controls
+      // Control bird with space
       if (cursors.space.isDown) {
         bird.setVelocityY(-350);
       }
 
-      // Bird animation (angle change)
+      // Slight tilt effect
       bird.setAngle(Math.min(bird.body.velocity.y / 4, 20));
+
+      // Make the background scroll to simulate movement
+      background.tilePositionX += 2;
+
+      // Update score if pipes pass the bird
+      pipes.getChildren().forEach(pipe => {
+        // Only top pipes have scored property set and only score once
+        if (pipe.flipY && !pipe.scored && pipe.x + pipe.width < bird.x) {
+          pipe.scored = true;
+          score += 1;
+          scoreText.setText('Score: ' + score);
+        }
+      });
     }
 
     function spawnPipes() {
       if (isGameOver) return;
 
-      // Random pipe gap
       const gap = 150;
       const pipeY = Phaser.Math.Between(200, 400);
 
@@ -98,30 +120,25 @@
       topPipe.setVelocityX(-200);
       topPipe.body.allowGravity = false;
       topPipe.setImmovable();
+      topPipe.scored = false; // Mark top pipe for scoring
 
       // Bottom pipe
       const bottomPipe = pipes.create(800, pipeY + gap / 2, 'pipe');
       bottomPipe.setVelocityX(-200);
       bottomPipe.body.allowGravity = false;
       bottomPipe.setImmovable();
-
-      // Add a scoring event
-      topPipe.scored = false;
     }
 
     function gameOver() {
+      if (isGameOver) return;
       isGameOver = true;
       this.physics.pause();
       bird.setTint(0xff0000);
-      this.add.text(400, 300, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
-    }
-
-    function updateScore(pipe) {
-      if (!pipe.scored && pipe.x < bird.x) {
-        pipe.scored = true;
-        score += 1;
-        scoreText.setText('Score: ' + score);
-      }
+      this.add.text(400, 300, 'Game Over\nPress SPACE to Restart', { 
+        fontSize: '64px', 
+        fill: '#fff', 
+        align: 'center' 
+      }).setOrigin(0.5);
     }
   </script>
 </body>
